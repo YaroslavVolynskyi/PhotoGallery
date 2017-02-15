@@ -1,6 +1,11 @@
 package com.yarik.photogallery.gallery;
 
+import android.support.annotation.NonNull;
+
+import com.yarik.photogallery.api.model.Photo;
 import com.yarik.photogallery.mvp.IPresenterView;
+
+import java.util.List;
 
 /**
  * <br>
@@ -11,4 +16,6 @@ import com.yarik.photogallery.mvp.IPresenterView;
  */
 
 public interface IGalleryView extends IPresenterView {
+
+    void addPhotos(@NonNull final List<Photo> photos);
 }
