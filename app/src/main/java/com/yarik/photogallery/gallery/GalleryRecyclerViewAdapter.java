@@ -14,6 +14,8 @@ import com.yarik.photogallery.api.model.Photo;
 import java.util.ArrayList;
 import java.util.List;
 
+import rx.functions.Action1;
+
 /**
  * <br>
  * XYRALITY GmbH 2015, BkAndroidClient
@@ -24,11 +26,13 @@ import java.util.List;
 
 public class GalleryRecyclerViewAdapter extends RecyclerView.Adapter<GalleryViewHolder> {
 
-    @NonNull private final Context     mContext;
-    @NonNull private final List<Photo> mPhotos = new ArrayList<>();
+    @NonNull private final Action1<Photo> mPhotoClickedAction;
+    @NonNull private final Context        mContext;
+    @NonNull private final List<Photo>    mPhotos = new ArrayList<>();
 
-    public GalleryRecyclerViewAdapter(@NonNull final Context context) {
+    public GalleryRecyclerViewAdapter(@NonNull final Context context, @NonNull final Action1<Photo> photoClickedAction) {
         mContext = context;
+        mPhotoClickedAction = photoClickedAction;
     }
 
     public void addPhotos(@NonNull final List<Photo> photos) {
@@ -45,7 +49,8 @@ public class GalleryRecyclerViewAdapter extends RecyclerView.Adapter<GalleryView
     public void onBindViewHolder(final GalleryViewHolder holder, final int position) {
         if (!mPhotos.isEmpty()) {
             final Photo photo = mPhotos.get(position);
-            if (photo != null) {
+            if (photo != null && holder.mImageView != null) {
+                holder.mImageView.setOnClickListener(view -> mPhotoClickedAction.call(mPhotos.get(position)));
                 Picasso.with(mContext).load(photo.getImageUrl()).into(holder.mImageView);
             }
         }

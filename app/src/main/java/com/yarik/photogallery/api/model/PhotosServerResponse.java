@@ -21,7 +21,7 @@ public class PhotosServerResponse {
     private Filter      filters;
     private String      feature;
 
-    public int getCurrent_page() {
+    public int getCurrentPage() {
         return current_page;
     }
 

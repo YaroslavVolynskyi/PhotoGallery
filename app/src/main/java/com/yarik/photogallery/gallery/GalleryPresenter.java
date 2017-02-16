@@ -7,12 +7,14 @@ import com.yarik.photogallery.api.Config;
 import com.yarik.photogallery.api.PhotosApi;
 import com.yarik.photogallery.api.PhotosFactory;
 import com.yarik.photogallery.api.model.Photo;
-import com.yarik.photogallery.api.model.PhotosServerResponse;
 import com.yarik.photogallery.mvp.Presenter;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
@@ -29,42 +31,70 @@ import timber.log.Timber;
 
 public class GalleryPresenter extends Presenter<IGalleryView> {
 
-    @NonNull final private PhotosManager mPhotosManager;
-    private CompositeSubscription        mSubscriptions;
+    private CompositeSubscription              mSubscriptions;
+    private final Map<String, String>          mParametersMap  = new HashMap<>(3);
+    @NonNull private final Observable<Integer> mNextPageObservable;
+    private int                                mLastPage       = 1;
+    private int                                mLastLoadedPage = 0;
+    private int                                mPhotosAded;
+    private List<Photo>                        mPhotos         = new ArrayList<>();
 
-    public GalleryPresenter(@NonNull final GalleryContext context, @NonNull final PhotosManager photosManager) {
+    public GalleryPresenter(@NonNull final GalleryContext context, @NonNull final Observable<Integer> nextPageObservable) {
         super(context);
-        mPhotosManager = photosManager;
+        mNextPageObservable = nextPageObservable;
+        mParametersMap.put(Config.PARAM_FEATURE, Config.PhotoFeatues.POPULAR.getFeatureName());
+        mParametersMap.put(Config.PARAM_COSUMER_KEY, Config.CONSUMER_KEY);
+        mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastPage));
     }
 
+    //@formatter:off
     @Override
     protected void onViewAttached() {
         mSubscriptions = new CompositeSubscription();
         final PhotosFactory factory = new PhotosFactory(Config.BASE_URL);
         final PhotosApi photosApi = factory.getPhotosApi();
-
-        final Map<String, String> parameters = new HashMap<>(3);
-        parameters.put("feature", "popular");
-        parameters.put("consumer_key", Config.CONSUMER_KEY);
-        parameters.put("page", "1");
-        final Subscription subscription = photosApi.getPhotos(parameters)
+        if (!mPhotos.isEmpty()) {
+            getView().addPhotos(mPhotos);
+        }
+        final Subscription nextPageSubscription = mNextPageObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .distinctUntilChanged()
+                .observeOn(Schedulers.newThread())
+                .switchMap(lastItem -> {
+                    if (lastItem > mPhotosAded - 2) {
+                        mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastLoadedPage + 1));
+                        return photosApi.getPhotos(mParametersMap);
+                    }
+                    return Observable.empty();
+                })
                 .subscribeOn(Schedulers.newThread())
-                .map(PhotosServerResponse::getPhotos)
+                .distinctUntilChanged()
+                .map(photosServerResponse -> {
+                    mLastLoadedPage = photosServerResponse.getCurrentPage();
+                    return photosServerResponse.getPhotos();
+                })
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnError(throwable -> Timber.e(throwable.getMessage()))
-                .subscribe(photos -> {
-                    for (final Photo photo : photos) {
-                        Timber.e(photo.getImageUrl());
-                    }
-                    getView().addPhotos(photos);
-                }, throwable -> {
-                    Timber.e(throwable.getMessage());
-                });
-        mSubscriptions.add(subscription);
+                .subscribe(this::newPhotosReceived, throwable -> Timber.e(throwable.getMessage()));
+
+        mSubscriptions.add(nextPageSubscription);
+    }
+    //@formatter:on
+
+    private void newPhotosReceived(@NonNull final List<Photo> photos) {
+        mPhotosAded += photos.size();
+        mPhotos.addAll(photos);
+        getView().addPhotos(photos);
     }
 
     @Override
     protected void onViewDetached() {
         mSubscriptions.unsubscribe();
+    }
+
+    public void onPhotoClicked(@NonNull final Photo photo) {
+        Timber.d("photo name" + photo.getName());
+        Timber.d("author name" + photo.getUser().getFirstname() + " " + photo.getUser().getLastname());
+        Timber.d("camera model" + photo.getCamera());
     }
 }
