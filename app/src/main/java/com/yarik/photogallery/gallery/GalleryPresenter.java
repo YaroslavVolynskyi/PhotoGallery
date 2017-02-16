@@ -31,65 +31,28 @@ import timber.log.Timber;
 
 public class GalleryPresenter extends Presenter<IGalleryView> {
 
-    private CompositeSubscription              mSubscriptions;
-    private final Map<String, String>          mParametersMap  = new HashMap<>(3);
-    @NonNull private final Observable<Integer> mNextPageObservable;
-    private int                                mLastPage       = 1;
-    private int                                mLastLoadedPage = 0;
     private int                                mPhotosAded;
     private List<Photo>                        mPhotos         = new ArrayList<>();
 
-    public GalleryPresenter(@NonNull final GalleryContext context, @NonNull final Observable<Integer> nextPageObservable) {
+    public GalleryPresenter(@NonNull final GalleryContext context) {
         super(context);
-        mNextPageObservable = nextPageObservable;
-        mParametersMap.put(Config.PARAM_FEATURE, Config.PhotoFeatues.POPULAR.getFeatureName());
-        mParametersMap.put(Config.PARAM_COSUMER_KEY, Config.CONSUMER_KEY);
-        mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastPage));
     }
 
-    //@formatter:off
     @Override
     protected void onViewAttached() {
-        mSubscriptions = new CompositeSubscription();
-        final PhotosFactory factory = new PhotosFactory(Config.BASE_URL);
-        final PhotosApi photosApi = factory.getPhotosApi();
         if (!mPhotos.isEmpty()) {
-            getView().addPhotos(mPhotos);
+            getView().addPhotos(mPhotos, mPhotosAded);
         }
-        final Subscription nextPageSubscription = mNextPageObservable
-                .subscribeOn(AndroidSchedulers.mainThread())
-                .distinctUntilChanged()
-                .observeOn(Schedulers.newThread())
-                .switchMap(lastItem -> {
-                    if (lastItem > mPhotosAded - 2) {
-                        mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastLoadedPage + 1));
-                        return photosApi.getPhotos(mParametersMap);
-                    }
-                    return Observable.empty();
-                })
-                .subscribeOn(Schedulers.newThread())
-                .distinctUntilChanged()
-                .map(photosServerResponse -> {
-                    mLastLoadedPage = photosServerResponse.getCurrentPage();
-                    return photosServerResponse.getPhotos();
-                })
-                .observeOn(AndroidSchedulers.mainThread())
-                .doOnError(throwable -> Timber.e(throwable.getMessage()))
-                .subscribe(this::newPhotosReceived, throwable -> Timber.e(throwable.getMessage()));
-
-        mSubscriptions.add(nextPageSubscription);
-    }
-    //@formatter:on
-
-    private void newPhotosReceived(@NonNull final List<Photo> photos) {
-        mPhotosAded += photos.size();
-        mPhotos.addAll(photos);
-        getView().addPhotos(photos);
     }
 
     @Override
     protected void onViewDetached() {
-        mSubscriptions.unsubscribe();
+    }
+
+    public void newPhotosReceived(@NonNull final List<Photo> photos) {
+        mPhotosAded += photos.size();
+        mPhotos.addAll(photos);
+        getView().addPhotos(photos, mPhotosAded);
     }
 
     public void onPhotoClicked(@NonNull final Photo photo) {

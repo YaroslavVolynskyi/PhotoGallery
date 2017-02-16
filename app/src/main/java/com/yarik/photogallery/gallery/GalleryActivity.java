@@ -1,5 +1,6 @@
 package com.yarik.photogallery.gallery;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.GridLayoutManager;
@@ -9,15 +10,23 @@ import android.support.v7.widget.RecyclerView;
 import com.yarik.photogallery.GalleryContext;
 import com.yarik.photogallery.R;
 import com.yarik.photogallery.api.Config;
+import com.yarik.photogallery.api.PhotosApi;
 import com.yarik.photogallery.api.PhotosFactory;
 import com.yarik.photogallery.api.model.Photo;
 import com.yarik.photogallery.mvp.PresenterActivity;
+import com.yarik.photogallery.photo.PhotoDetailActivity;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import rx.Observable;
+import rx.Subscription;
+import rx.android.schedulers.AndroidSchedulers;
+import rx.schedulers.Schedulers;
+import rx.subscriptions.CompositeSubscription;
 import timber.log.Timber;
 
 /**
@@ -31,8 +40,11 @@ import timber.log.Timber;
 public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGalleryView> implements IGalleryView {
 
     @BindView(R.id.gallery_recycler_view) RecyclerView mGalleryRecyclerView;
-
+    private final Map<String, String>                  mParametersMap = new HashMap<>(3);
     private GalleryRecyclerViewAdapter                 mAdapter;
+    private CompositeSubscription                      mSubscriptions;
+    private int                                        mPhotosAdded;
+    private int                                        mLastLoadedPage;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -44,9 +56,16 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
         mGalleryRecyclerView.setLayoutManager(gridLayoutManager);
         mAdapter = new GalleryRecyclerViewAdapter(this, this::onPhotoClicked);
         mGalleryRecyclerView.setAdapter(mAdapter);
+        mParametersMap.put(Config.PARAM_FEATURE, Config.PhotoFeatues.POPULAR.getFeatureName());
+        mParametersMap.put(Config.PARAM_COSUMER_KEY, Config.CONSUMER_KEY);
+        mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastLoadedPage));
     }
 
     private void onPhotoClicked(@NonNull final Photo photo) {
+        final Intent intent = new Intent(this, PhotoDetailActivity.class);
+        intent.putExtra("url", photo.getImageUrl());
+        intent.putExtra("photoname", photo.getName());
+        startActivity(intent);
         getPresenter().onPhotoClicked(photo);
     }
 
@@ -67,19 +86,44 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     @Override
     protected void onResume() {
         super.onResume();
-
+        //@formatter:off
+        mSubscriptions = new CompositeSubscription();
+        final PhotosFactory factory = new PhotosFactory(Config.BASE_URL);
+        final PhotosApi photosApi = factory.getPhotosApi();
+        final Subscription nextPageSubscription = getNextPageObservable()
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .distinctUntilChanged()
+                .observeOn(Schedulers.newThread())
+                .switchMap(lastItem -> {
+                    if (lastItem > mPhotosAdded - 2) {
+                        mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastLoadedPage + 1));
+                        return photosApi.getPhotos(mParametersMap);
+                    }
+                    return Observable.empty();
+                })
+                .subscribeOn(Schedulers.newThread())
+                .distinctUntilChanged()
+                .map(photosServerResponse -> {
+                    mLastLoadedPage = photosServerResponse.getCurrentPage();
+                    return photosServerResponse.getPhotos();
+                })
+                .observeOn(AndroidSchedulers.mainThread())
+                .doOnError(throwable -> Timber.e(throwable.getMessage()))
+                .subscribe(getPresenter()::newPhotosReceived, throwable -> Timber.e(throwable.getMessage()));
+        mSubscriptions.add(nextPageSubscription);
+        //@formatter:on
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-
+        mSubscriptions.unsubscribe();
     }
 
     @NonNull
     @Override
     protected GalleryPresenter onCreatePresenter(@NonNull final GalleryContext context) {
-        return new GalleryPresenter(context, getNextPageObservable());
+        return new GalleryPresenter(context);
     }
 
     @Override
@@ -88,8 +132,9 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     }
 
     @Override
-    public void addPhotos(@NonNull final List<Photo> photos) {
+    public void addPhotos(@NonNull final List<Photo> photos, final int photosAdded) {
         mAdapter.addPhotos(photos);
         mAdapter.notifyDataSetChanged();
+        mPhotosAdded = photosAdded;
     }
 }

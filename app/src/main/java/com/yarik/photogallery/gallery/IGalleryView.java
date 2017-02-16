@@ -17,5 +17,5 @@ import java.util.List;
 
 public interface IGalleryView extends IPresenterView {
 
-    void addPhotos(@NonNull final List<Photo> photos);
+    void addPhotos(@NonNull List<Photo> photos, int photosAdded);
 }
