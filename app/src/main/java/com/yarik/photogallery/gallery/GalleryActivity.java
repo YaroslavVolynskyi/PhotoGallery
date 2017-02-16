@@ -71,7 +71,7 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
 
     private Observable<Integer> getNextPageObservable() {
         return Observable.create(subscriber -> {
-            subscriber.onNext(1);
+            subscriber.onNext(mLastLoadedPage + 1);
             mGalleryRecyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
                 public void onScrolled(final RecyclerView recyclerView, final int dx, final int dy) {
@@ -109,7 +109,9 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
                 })
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnError(throwable -> Timber.e(throwable.getMessage()))
-                .subscribe(getPresenter()::newPhotosReceived, throwable -> Timber.e(throwable.getMessage()));
+                .subscribe(photos -> {
+                    getPresenter().newPhotosReceived(photos, mLastLoadedPage);
+                }, throwable -> Timber.e(throwable.getMessage()));
         mSubscriptions.add(nextPageSubscription);
         //@formatter:on
     }
@@ -132,9 +134,14 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     }
 
     @Override
-    public void addPhotos(@NonNull final List<Photo> photos, final int photosAdded) {
-        mAdapter.addPhotos(photos);
+    public void addPhotos(@NonNull final List<Photo> photos, final int photosAdded, final int lastLoadedPage, final boolean arePhotosOld) {
+        if (arePhotosOld) {
+            mAdapter.setPhotos(photos);
+        } else {
+            mAdapter.addPhotos(photos);
+        }
         mAdapter.notifyDataSetChanged();
+        mLastLoadedPage = lastLoadedPage;
         mPhotosAdded = photosAdded;
     }
 }

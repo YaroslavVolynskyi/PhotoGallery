@@ -31,8 +31,9 @@ import timber.log.Timber;
 
 public class GalleryPresenter extends Presenter<IGalleryView> {
 
-    private int                                mPhotosAded;
-    private List<Photo>                        mPhotos         = new ArrayList<>();
+    private int         mPhotosAded;
+    private List<Photo> mPhotos = new ArrayList<>();
+    private int         mLastLoadedPage;
 
     public GalleryPresenter(@NonNull final GalleryContext context) {
         super(context);
@@ -41,18 +42,18 @@ public class GalleryPresenter extends Presenter<IGalleryView> {
     @Override
     protected void onViewAttached() {
         if (!mPhotos.isEmpty()) {
-            getView().addPhotos(mPhotos, mPhotosAded);
+            getView().addPhotos(mPhotos, mPhotosAded, mLastLoadedPage, true);
         }
     }
 
     @Override
-    protected void onViewDetached() {
-    }
+    protected void onViewDetached() {}
 
-    public void newPhotosReceived(@NonNull final List<Photo> photos) {
+    public void newPhotosReceived(@NonNull final List<Photo> photos, final int lastLoadedPage) {
         mPhotosAded += photos.size();
         mPhotos.addAll(photos);
-        getView().addPhotos(photos, mPhotosAded);
+        mLastLoadedPage = lastLoadedPage;
+        getView().addPhotos(photos, mPhotosAded, mLastLoadedPage, false);
     }
 
     public void onPhotoClicked(@NonNull final Photo photo) {

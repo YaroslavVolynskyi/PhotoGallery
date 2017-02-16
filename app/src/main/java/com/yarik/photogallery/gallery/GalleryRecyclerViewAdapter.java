@@ -39,6 +39,11 @@ public class GalleryRecyclerViewAdapter extends RecyclerView.Adapter<GalleryView
         mPhotos.addAll(photos);
     }
 
+    public void setPhotos(@NonNull final List<Photo> photos) {
+        mPhotos.clear();
+        mPhotos.addAll(photos);
+    }
+
     @Override
     public GalleryViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
         final View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.gallery_item, parent, false);
