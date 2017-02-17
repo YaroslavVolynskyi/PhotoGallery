@@ -51,11 +51,13 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
         final int columnCount = 2;
         final GridLayoutManager gridLayoutManager = new GridLayoutManager(this, columnCount);
         mGalleryRecyclerView.setLayoutManager(gridLayoutManager);
         mAdapter = new GalleryRecyclerViewAdapter(this, this::onPhotoClicked);
         mGalleryRecyclerView.setAdapter(mAdapter);
+
         mParametersMap.put(Config.PARAM_FEATURE, Config.PhotoFeatues.POPULAR.getFeatureName());
         mParametersMap.put(Config.PARAM_COSUMER_KEY, Config.CONSUMER_KEY);
         mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastLoadedPage));
@@ -64,8 +66,8 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     @SuppressWarnings("unchecked")
     private void onPhotoClicked(@NonNull final List<Photo> photos, final int position) {
         final Intent intent = new Intent(this, PhotoDetailActivity.class);
-        intent.putParcelableArrayListExtra("photos", (ArrayList) photos);
-        intent.putExtra("position", position);
+        intent.putParcelableArrayListExtra(PhotoDetailActivity.KEY_PHOTOS, (ArrayList) photos);
+        intent.putExtra(PhotoDetailActivity.KEY_POSITION, position);
         startActivity(intent);
     }
 

@@ -3,4 +3,7 @@
     <string name="share">Share</string>
     <string name="check_out_photo_xs">Check out this photo:\n%s</string>
     <string name="details_activity">Details activity</string>
+    <string name="author_xs">Author: %s</string>
+    <string name="photo_xs">Photo: %s</string>
+    <string name="camera_xs">Camera: %s</string>
 </resources>
