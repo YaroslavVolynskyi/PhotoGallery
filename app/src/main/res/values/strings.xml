@@ -6,4 +6,5 @@
     <string name="author_xs">Author: %s</string>
     <string name="photo_xs">Photo: %s</string>
     <string name="camera_xs">Camera: %s</string>
+    <string name="loading_dialog">Loading photos, please wait.</string>
 </resources>

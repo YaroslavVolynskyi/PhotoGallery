@@ -1,12 +1,10 @@
 package com.yarik.photogallery.gallery;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
-import android.content.res.Configuration;
-import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
 
 import com.yarik.photogallery.GalleryContext;
@@ -54,6 +52,7 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     private CompositeSubscription                      mSubscriptions;
     private int                                        mPhotosAdded;
     private int                                        mLastLoadedPage;
+    private ProgressDialog                             mProgressDialog;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -104,6 +103,9 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
         mSubscriptions = new CompositeSubscription();
         final PhotosFactory factory = new PhotosFactory(Config.BASE_URL);
         final PhotosApi photosApi = factory.getPhotosApi();
+        if (mPhotosAdded == 0) {
+            mProgressDialog = ProgressDialog.show(this, "", getString(R.string.loading_dialog), true);
+        }
         final Subscription nextPageSubscription = getNextPageObservable()
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .distinctUntilChanged()
@@ -122,12 +124,25 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
                     return photosServerResponse.getPhotos();
                 })
                 .observeOn(AndroidSchedulers.mainThread())
-                .doOnError(throwable -> Timber.e(throwable.getMessage()))
+                .doOnError(throwable -> {
+                    Timber.e(throwable.getMessage());
+                    hideProgressDialog();
+                })
                 .subscribe(photos -> {
                     getPresenter().newPhotosReceived(photos, mLastLoadedPage);
-                }, throwable -> Timber.e(throwable.getMessage()));
+                    hideProgressDialog();
+                }, throwable -> {
+                    Timber.e(throwable.getMessage());
+                    hideProgressDialog();
+                });
         mSubscriptions.add(nextPageSubscription);
         //@formatter:on
+    }
+
+    private void hideProgressDialog() {
+        if (mProgressDialog != null && mProgressDialog.isShowing()) {
+            mProgressDialog.hide();
+        }
     }
 
     @Override

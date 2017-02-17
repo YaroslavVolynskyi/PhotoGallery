@@ -8,8 +8,6 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.design.widget.FloatingActionButton;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
 
 import com.lsjwzh.widget.recyclerviewpager.RecyclerViewPager;
 import com.yarik.photogallery.GalleryContext;
