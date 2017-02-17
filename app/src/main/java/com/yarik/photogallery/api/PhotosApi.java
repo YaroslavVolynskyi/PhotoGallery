@@ -5,7 +5,6 @@ import com.yarik.photogallery.api.model.PhotosServerResponse;
 import java.util.Map;
 
 import retrofit2.http.GET;
-import retrofit2.http.Query;
 import retrofit2.http.QueryMap;
 import rx.Observable;
 

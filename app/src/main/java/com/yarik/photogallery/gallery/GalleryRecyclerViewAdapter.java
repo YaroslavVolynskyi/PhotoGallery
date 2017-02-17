@@ -15,6 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import rx.functions.Action1;
+import rx.functions.Action2;
 
 /**
  * <br>
@@ -26,11 +27,11 @@ import rx.functions.Action1;
 
 public class GalleryRecyclerViewAdapter extends RecyclerView.Adapter<GalleryViewHolder> {
 
-    @NonNull private final Action1<Photo> mPhotoClickedAction;
+    @NonNull private final Action2<List<Photo>, Integer> mPhotoClickedAction;
     @NonNull private final Context        mContext;
     @NonNull private final List<Photo>    mPhotos = new ArrayList<>();
 
-    public GalleryRecyclerViewAdapter(@NonNull final Context context, @NonNull final Action1<Photo> photoClickedAction) {
+    public GalleryRecyclerViewAdapter(@NonNull final Context context, @NonNull final Action2<List<Photo>, Integer> photoClickedAction) {
         mContext = context;
         mPhotoClickedAction = photoClickedAction;
     }
@@ -55,7 +56,8 @@ public class GalleryRecyclerViewAdapter extends RecyclerView.Adapter<GalleryView
         if (!mPhotos.isEmpty()) {
             final Photo photo = mPhotos.get(position);
             if (photo != null && holder.mImageView != null) {
-                holder.mImageView.setOnClickListener(view -> mPhotoClickedAction.call(mPhotos.get(position)));
+                //holder.mImageView.setOnClickListener(view -> mPhotoClickedAction.call(mPhotos.get(position)));
+                holder.mImageView.setOnClickListener(view -> mPhotoClickedAction.call(mPhotos, position));
                 Picasso.with(mContext).load(photo.getImageUrl()).into(holder.mImageView);
             }
         }

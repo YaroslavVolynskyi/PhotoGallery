@@ -4,7 +4,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.GridLayoutManager;
-import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 
 import com.yarik.photogallery.GalleryContext;
@@ -16,6 +15,7 @@ import com.yarik.photogallery.api.model.Photo;
 import com.yarik.photogallery.mvp.PresenterActivity;
 import com.yarik.photogallery.photo.PhotoDetailActivity;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -61,12 +61,12 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
         mParametersMap.put(Config.PARAM_PAGE, String.valueOf(mLastLoadedPage));
     }
 
-    private void onPhotoClicked(@NonNull final Photo photo) {
+    @SuppressWarnings("unchecked")
+    private void onPhotoClicked(@NonNull final List<Photo> photos, final int position) {
         final Intent intent = new Intent(this, PhotoDetailActivity.class);
-        intent.putExtra("url", photo.getImageUrl());
-        intent.putExtra("photoname", photo.getName());
+        intent.putParcelableArrayListExtra("photos", (ArrayList) photos);
+        intent.putExtra("position", position);
         startActivity(intent);
-        getPresenter().onPhotoClicked(photo);
     }
 
     private Observable<Integer> getNextPageObservable() {

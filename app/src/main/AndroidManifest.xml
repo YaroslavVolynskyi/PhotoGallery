@@ -19,7 +19,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".photo.PhotoDetailActivity"/>
+        <activity
+            android:label="@string/details_activity"
+            android:name=".photo.PhotoDetailActivity"/>
     </application>
 
 </manifest>

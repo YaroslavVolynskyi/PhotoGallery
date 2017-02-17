@@ -12,8 +12,10 @@ import android.support.design.widget.FloatingActionButton;
 import com.squareup.picasso.Picasso;
 import com.yarik.photogallery.GalleryContext;
 import com.yarik.photogallery.R;
+import com.yarik.photogallery.api.model.Photo;
 import com.yarik.photogallery.mvp.PresenterActivity;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import butterknife.BindView;
@@ -45,14 +47,16 @@ public class PhotoDetailActivity extends PresenterActivity<PhotoDetailPresenter,
 
     private void initViews() {
         final Intent intent = getIntent();
-        final String url = intent.getExtras().getString("url");
+        final ArrayList<Photo> photos = intent.getParcelableArrayListExtra("photos");
+        final int position = intent.getExtras().getInt("position");
+        final Photo photo = photos.get(position);
         final String photoName = intent.getExtras().getString("photoname");
-        Picasso.with(this).load(url).into(mPhotoImageView);
+        Picasso.with(this).load(photo.getImageUrl()).into(mPhotoImageView);
         mPhotoNameTextView.setVisibility(photoName != null ? View.VISIBLE : View.GONE);
         mPhotoNameTextView.setText(photoName);
         mFab.setOnClickListener(view -> {
-            if (url != null) {
-                sharePhotoUrl(url);
+            if (photo.getImageUrl() != null) {
+                sharePhotoUrl(photo.getImageUrl());
             }
         });
     }
