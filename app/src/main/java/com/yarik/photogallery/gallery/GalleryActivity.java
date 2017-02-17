@@ -1,13 +1,19 @@
 package com.yarik.photogallery.gallery;
 
+import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.net.ConnectivityManager;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 
 import com.yarik.photogallery.GalleryContext;
+import com.yarik.photogallery.NetworkUtils;
 import com.yarik.photogallery.R;
 import com.yarik.photogallery.api.Config;
 import com.yarik.photogallery.api.PhotosApi;
@@ -26,6 +32,7 @@ import butterknife.ButterKnife;
 import rx.Observable;
 import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
+import rx.functions.Action0;
 import rx.schedulers.Schedulers;
 import rx.subscriptions.CompositeSubscription;
 import timber.log.Timber;
@@ -53,12 +60,15 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     private int                                        mPhotosAdded;
     private int                                        mLastLoadedPage;
     private ProgressDialog                             mProgressDialog;
+    private boolean                                    mIsDialogShown;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
+        registerReceiver(new ConnectivityChangeReceiver(this::initSubscriptions), new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
 
         final int orientation = getResources().getConfiguration().orientation;
         if (orientation == ORIENTATION_LANDSCAPE) {
@@ -99,12 +109,29 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     @Override
     protected void onResume() {
         super.onResume();
+        if (NetworkUtils.isNetworkAvailable(this)) {
+            initSubscriptions();
+        } else {
+            showNoInternerDialog();
+        }
+    }
+
+    private void showNoInternerDialog() {
+        final AlertDialog alertDialog = new AlertDialog.Builder(this).create();
+        alertDialog.setTitle(R.string.no_internet);
+        alertDialog.setMessage(getString(R.string.turn_on_internet_connection));
+        alertDialog.setButton(AlertDialog.BUTTON_POSITIVE, getString(R.string.ok), (dialog, which) -> dialog.dismiss());
+        alertDialog.show();
+    }
+
+    private void initSubscriptions() {
         //@formatter:off
         mSubscriptions = new CompositeSubscription();
         final PhotosFactory factory = new PhotosFactory(Config.BASE_URL);
         final PhotosApi photosApi = factory.getPhotosApi();
-        if (mPhotosAdded == 0) {
+        if (mPhotosAdded == 0 && mLastLoadedPage == 0 && !mIsDialogShown) {
             mProgressDialog = ProgressDialog.show(this, "", getString(R.string.loading_dialog), true);
+            mIsDialogShown = true;
         }
         final Subscription nextPageSubscription = getNextPageObservable()
                 .subscribeOn(AndroidSchedulers.mainThread())
@@ -129,8 +156,8 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
                     hideProgressDialog();
                 })
                 .subscribe(photos -> {
-                    getPresenter().newPhotosReceived(photos, mLastLoadedPage);
                     hideProgressDialog();
+                    getPresenter().newPhotosReceived(photos, mLastLoadedPage);
                 }, throwable -> {
                     Timber.e(throwable.getMessage());
                     hideProgressDialog();
@@ -142,13 +169,16 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
     private void hideProgressDialog() {
         if (mProgressDialog != null && mProgressDialog.isShowing()) {
             mProgressDialog.hide();
+            mIsDialogShown = false;
         }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        mSubscriptions.unsubscribe();
+        if (mSubscriptions != null && !mSubscriptions.isUnsubscribed()) {
+            mSubscriptions.unsubscribe();
+        }
     }
 
     @NonNull
@@ -172,5 +202,21 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
         mAdapter.notifyDataSetChanged();
         mLastLoadedPage = lastLoadedPage;
         mPhotosAdded = photosAdded;
+    }
+
+    private class ConnectivityChangeReceiver extends BroadcastReceiver {
+
+        @NonNull private final Action0 mInitSubscriptionAction;
+
+        public ConnectivityChangeReceiver(@NonNull final Action0 initSubscriptionAction) {
+            mInitSubscriptionAction = initSubscriptionAction;
+        }
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (NetworkUtils.isNetworkAvailable(context)) {
+                mInitSubscriptionAction.call();
+            }
+        }
     }
 }

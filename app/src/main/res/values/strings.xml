@@ -7,4 +7,7 @@
     <string name="photo_xs">Photo: %s</string>
     <string name="camera_xs">Camera: %s</string>
     <string name="loading_dialog">Loading photos, please wait.</string>
+    <string name="turn_on_internet_connection">Turn on internet connection and wait for the photo feed</string>
+    <string name="no_internet">No internet connection</string>
+    <string name="ok">Ok</string>
 </resources>
