@@ -1,9 +1,12 @@
 package com.yarik.photogallery.gallery;
 
 import android.content.Intent;
+import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.v7.widget.GridLayoutManager;
+import android.support.v7.widget.OrientationHelper;
 import android.support.v7.widget.RecyclerView;
 
 import com.yarik.photogallery.GalleryContext;
@@ -29,6 +32,9 @@ import rx.schedulers.Schedulers;
 import rx.subscriptions.CompositeSubscription;
 import timber.log.Timber;
 
+import static android.content.res.Configuration.ORIENTATION_LANDSCAPE;
+import static android.content.res.Configuration.ORIENTATION_PORTRAIT;
+
 /**
  * <br>
  * XYRALITY GmbH 2015, BkAndroidClient
@@ -39,8 +45,11 @@ import timber.log.Timber;
 
 public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGalleryView> implements IGalleryView {
 
+    private static final int                           PORTRAIT_COLUMN_COUNT  = 2;
+    private static final int                           LANDSCAPE_COLUMN_COUNT = 4;
+
     @BindView(R.id.gallery_recycler_view) RecyclerView mGalleryRecyclerView;
-    private final Map<String, String>                  mParametersMap = new HashMap<>(3);
+    private final Map<String, String>                  mParametersMap         = new HashMap<>(3);
     private GalleryRecyclerViewAdapter                 mAdapter;
     private CompositeSubscription                      mSubscriptions;
     private int                                        mPhotosAdded;
@@ -52,9 +61,12 @@ public class GalleryActivity extends PresenterActivity<GalleryPresenter, IGaller
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
 
-        final int columnCount = 2;
-        final GridLayoutManager gridLayoutManager = new GridLayoutManager(this, columnCount);
-        mGalleryRecyclerView.setLayoutManager(gridLayoutManager);
+        final int orientation = getResources().getConfiguration().orientation;
+        if (orientation == ORIENTATION_LANDSCAPE) {
+            mGalleryRecyclerView.setLayoutManager(new GridLayoutManager(this, LANDSCAPE_COLUMN_COUNT));
+        } else if (orientation == ORIENTATION_PORTRAIT) {
+            mGalleryRecyclerView.setLayoutManager(new GridLayoutManager(this, PORTRAIT_COLUMN_COUNT));
+        }
         mAdapter = new GalleryRecyclerViewAdapter(this, this::onPhotoClicked);
         mGalleryRecyclerView.setAdapter(mAdapter);
 

@@ -56,7 +56,6 @@ public class GalleryRecyclerViewAdapter extends RecyclerView.Adapter<GalleryView
         if (!mPhotos.isEmpty()) {
             final Photo photo = mPhotos.get(position);
             if (photo != null && holder.mImageView != null) {
-                //holder.mImageView.setOnClickListener(view -> mPhotoClickedAction.call(mPhotos.get(position)));
                 holder.mImageView.setOnClickListener(view -> mPhotoClickedAction.call(mPhotos, position));
                 Picasso.with(mContext).load(photo.getImageUrl()).into(holder.mImageView);
             }
